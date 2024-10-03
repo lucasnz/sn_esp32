@@ -1,1 +1,1 @@
-Testing github build and release.
+Testing release tags.

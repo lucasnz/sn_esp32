@@ -1,0 +1,42 @@
+# .github/workflows/release.yml
+name: Build and Release Firmware
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags only
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        platform: [esp32dev, esp8266dev, spa-control-pcb]
+    uses: ./.github/workflows/build_firmware.yml
+    with:
+      platform: ${{ matrix.platform }}
+    secrets: inherit
+
+  release:
+    needs: build
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo for CHANGELOG
+        uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: firmware
+          merge-multiple: true
+      - name: Display structure of downloaded files
+        run: ls -Rla firmware/
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          #tag: ${{ github.ref }}
+          makeLatest: true
+          allowUpdates: true
+          artifacts: "firmware/firmware*.bin"
+          bodyFile: "CHANGELOG.md"
+          removeArtifacts: true

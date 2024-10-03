@@ -1,0 +1,36 @@
+# .github/workflows/build.yml
+name: Build Firmware
+
+on:
+  push:
+    branches:
+      - '**'  # Trigger on all branch pushes
+    tags-ignore:
+      - 'v*'  # Ignore tag pushes
+  pull_request:
+    types: [opened, reopened]
+  workflow_dispatch:
+
+jobs:
+  pre_job:
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          concurrent_skipping: 'same_content_newer'
+          do_not_skip: '["pull_request", "workflow_dispatch", "schedule"]'
+
+  build:
+    needs: pre_job
+    if: needs.pre_job.outputs.should_skip != 'true'
+    strategy:
+      matrix:
+        platform: [esp32dev, esp8266dev, spa-control-pcb]
+    uses: ./.github/workflows/build_firmware.yml
+    with:
+      platform: ${{ matrix.platform }}
+    secrets: inherit
