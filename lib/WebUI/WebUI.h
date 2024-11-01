@@ -27,13 +27,14 @@ class WebUI {
             std::unique_ptr<WebServer> server;
         #endif
 
-        WebUI(SpaInterface *spa);
+        WebUI(SpaInterface *spa, Config *config);
         void startWiFiManager();
         void begin();
         bool initialised = false;
 
     private:
         SpaInterface *_spa;
+        Config *_config;
         bool _wifiManagerSaveConfig;
 
         void wifiManagerSaveConfigCallback();

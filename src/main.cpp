@@ -25,6 +25,7 @@ unsigned long bootStartMillis;  // To track when the device started
 RemoteDebug Debug;
 
 SpaInterface si;
+Config config;
 
 #if defined(LED_PIN)
 Blinker led(LED_PIN);
@@ -32,7 +33,7 @@ Blinker led(LED_PIN);
 WiFiClient wifi;
 PubSubClient mqttClient(wifi);
 
-WebUI ui(&si);
+WebUI ui(&si, &config);
 
 ulong mqttLastConnect = 0;
 ulong wifiLastConnect = millis();
@@ -418,7 +419,7 @@ void mqttHaAutoDiscovery() {
   String discoveryTopic;
 
   SpaADInformationTemplate spa;
-  spa.spaName = spaName;
+  spa.spaName = config.getSpaName();
   spa.spaSerialNumber = spaSerialNumber;
   spa.stateTopic = mqttStatusTopic;
   spa.availabilityTopic = mqttAvailability;
@@ -536,7 +537,7 @@ void mqttHaAutoDiscovery() {
   mqttClient.publish(discoveryTopic.c_str(), output.c_str(), true);
 
   //climateADPublish(mqttClient, spa, spaName, "{{ value_json.temperatures }}", "Heating");
-  ADConf.displayName = spaName;
+  ADConf.displayName = config.getSpaName();
   ADConf.valueTemplate = "{{ value_json.temperatures }}";
   ADConf.propertyId = "Heating";
   ADConf.deviceClass = "";
@@ -845,19 +846,21 @@ void setup() {
     LittleFS.begin();
   }
 
-  if (!readConfigFile()) {
+  if (!config.readConfigFile()) {
     debugW("Failed to open config.json, starting Wi-Fi Manager");
     ui.startWiFiManager();
     //I'm not sure if we need a reboot here - probably not
   }
 
-  mqttClient.setServer(mqttServer.c_str(),mqttPort.toInt());
+  mqttClient.setServer(config.getMqttServer().c_str(), config.getMqttPort().toInt());
   mqttClient.setCallback(mqttCallback);
   mqttClient.setBufferSize(2048);
 
   bootStartMillis = millis();  // Record the current boot time in milliseconds
 
   ui.begin();
+
+  si.setUpdateFrequency(config.getUpdateFrequency());
 
 }
 
@@ -915,11 +918,11 @@ void loop() {
             #if defined(LED_PIN)
             led.setInterval(500);
             #endif
-            debugW("MQTT not connected, attempting connection to %s:%s",mqttServer.c_str(),mqttPort.c_str());
+            debugW("MQTT not connected, attempting connection to %s:%s", config.getMqttServer().c_str(), config.getMqttPort().c_str());
             mqttLastConnect = now;
 
 
-            if (mqttClient.connect("sn_esp32", mqttUserName.c_str(), mqttPassword.c_str(), mqttAvailability.c_str(),2,true,"offline")) {
+            if (mqttClient.connect("sn_esp32", config.getMqttUserName().c_str(), config.getMqttPassword().c_str(), mqttAvailability.c_str(),2,true,"offline")) {
               debugI("MQTT connected");
     
               String subTopic = mqttBase+"set/#";
