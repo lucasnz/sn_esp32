@@ -817,6 +817,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 #pragma endregion
 
+void savedConfigCallback() {
+  mqttClient.disconnect();
+  mqttClient = PubSubClient(wifi);
+  mqttClient.setServer(config.getMqttServer().c_str(), config.getMqttPort().toInt());
+  mqttClient.setCallback(mqttCallback);
+  mqttClient.setBufferSize(2048);
+
+  si.setUpdateFrequency(config.getUpdateFrequency());
+}
+
 void setup() {
   #if defined(EN_PIN)
     pinMode(EN_PIN, INPUT_PULLUP);
@@ -859,8 +869,8 @@ void setup() {
   bootStartMillis = millis();  // Record the current boot time in milliseconds
 
   ui.begin();
-
   si.setUpdateFrequency(config.getUpdateFrequency());
+  ui.setSavedConfigCallback(savedConfigCallback);
 
 }
 

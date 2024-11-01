@@ -29,6 +29,11 @@ class WebUI {
 
         WebUI(SpaInterface *spa, Config *config);
         void startWiFiManager();
+
+        /// @brief Set the function to be called when properties have been updated.
+        /// @param f
+        void setSavedConfigCallback(void (*f)());
+
         void begin();
         bool initialised = false;
 
@@ -36,6 +41,7 @@ class WebUI {
         SpaInterface *_spa;
         Config *_config;
         bool _wifiManagerSaveConfig;
+        void (*_savedConfigCallback)() = nullptr;
 
         void wifiManagerSaveConfigCallback();
         const char* getError();

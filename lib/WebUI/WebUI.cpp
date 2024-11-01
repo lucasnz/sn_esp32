@@ -57,6 +57,9 @@ void WebUI::startWiFiManager() {
   }
 }
 
+void WebUI::setSavedConfigCallback(void (*f)()) {
+    _savedConfigCallback = f;
+}
 
 void WebUI::begin() {
         
@@ -157,6 +160,7 @@ void WebUI::begin() {
         _config->writeConfigFile();
         server->sendHeader("Connection", "close");
         server->send(200, "text/plain", "Updated");
+        if (_savedConfigCallback != nullptr) { _savedConfigCallback(); }
     });
 
     server->on("/json/config", HTTP_GET, [&]() {
