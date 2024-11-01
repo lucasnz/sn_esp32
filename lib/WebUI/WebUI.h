@@ -4,6 +4,7 @@
 #define BUILD_INFO __DATE__ " " __TIME__
 
 #include <Arduino.h>
+#include <WiFiManager.h>
 
 #if defined(ESP8266)
   #include <ESP8266WebServer.h>
@@ -27,12 +28,15 @@ class WebUI {
         #endif
 
         WebUI(SpaInterface *spa);
+        void startWiFiManager();
         void begin();
         bool initialised = false;
 
     private:
         SpaInterface *_spa;
+        bool _wifiManagerSaveConfig;
 
+        void wifiManagerSaveConfigCallback();
         const char* getError();
 
 static constexpr const char *indexPageTemplate PROGMEM =

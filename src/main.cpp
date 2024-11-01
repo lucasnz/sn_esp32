@@ -10,7 +10,6 @@
 
 #include <WiFiClient.h>
 #include <RemoteDebug.h>
-#include <WiFiManager.h>
 #include <PubSubClient.h>
 
 #if defined(LED_PIN)
@@ -35,9 +34,6 @@ PubSubClient mqttClient(wifi);
 
 WebUI ui(&si);
 
-
-
-bool saveConfig = false;
 ulong mqttLastConnect = 0;
 ulong wifiLastConnect = millis();
 ulong bootTime = millis();
@@ -52,45 +48,6 @@ String mqttAvailability = "";
 
 String spaSerialNumber = "";
 
-void saveConfigCallback(){
-  saveConfig = true;
-}
-
-void startWiFiManager(){
-  if (ui.initialised) {
-    ui.server->stop();
-  }
-
-  WiFiManager wm;
-  WiFiManagerParameter custom_spa_name("spa_name", "Spa Name", spaName.c_str(), 40);
-  WiFiManagerParameter custom_mqtt_server("server", "MQTT server", mqttServer.c_str(), 40);
-  WiFiManagerParameter custom_mqtt_port("port", "MQTT port", mqttPort.c_str(), 6);
-  WiFiManagerParameter custom_mqtt_username("username", "MQTT Username", mqttUserName.c_str(), 20 );
-  WiFiManagerParameter custom_mqtt_password("password", "MQTT Password", mqttPassword.c_str(), 40 );
-  wm.addParameter(&custom_spa_name);
-  wm.addParameter(&custom_mqtt_server);
-  wm.addParameter(&custom_mqtt_port);
-  wm.addParameter(&custom_mqtt_username);
-  wm.addParameter(&custom_mqtt_password);
-  wm.setBreakAfterConfig(true);
-  wm.setSaveConfigCallback(saveConfigCallback);
-  wm.setConnectTimeout(300); //close the WiFiManager after 300 seconds of inactivity
-
-
-  wm.startConfigPortal();
-  debugI("Exiting Portal");
-
-  if (saveConfig) {
-    spaName = String(custom_spa_name.getValue());
-    mqttServer = String(custom_mqtt_server.getValue());
-    mqttPort = String(custom_mqtt_port.getValue());
-    mqttUserName = String(custom_mqtt_username.getValue());
-    mqttPassword = String(custom_mqtt_password.getValue());
-
-    writeConfigFile();
-  }
-}
-
 // We check the EN_PIN every loop, to allow people to configure the system
 void checkButton(){
 #if defined(EN_PIN)
@@ -99,17 +56,12 @@ void checkButton(){
     delay(100); // wait and then test again to ensure that it is a held button not a press
     if(digitalRead(EN_PIN) == LOW) {
       debugI("Button press detected. Starting Portal");
-      startWiFiManager();
+      ui.startWiFiManager();
 
       ESP.restart();  // restart, dirty but easier than trying to restart services one by one
     }
   }
 #endif
-if (triggerWiFiManager) {
-  triggerWiFiManager = false;
-  startWiFiManager();
-  ESP.restart();  // restart, dirty but easier than trying to restart services one by one
-}
 }
 
 /*
@@ -895,7 +847,7 @@ void setup() {
 
   if (!readConfigFile()) {
     debugW("Failed to open config.json, starting Wi-Fi Manager");
-    startWiFiManager();
+    ui.startWiFiManager();
     //I'm not sure if we need a reboot here - probably not
   }
 

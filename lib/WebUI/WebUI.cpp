@@ -16,6 +16,47 @@ const char * WebUI::getError() {
     #endif
 }
 
+void WebUI::wifiManagerSaveConfigCallback() {
+  _wifiManagerSaveConfig = true;
+}
+
+void WebUI::startWiFiManager() {
+  if (this->initialised) {
+    this->server->stop();
+  }
+
+  WiFiManager wm;
+  WiFiManagerParameter custom_spa_name("spa_name", "Spa Name", spaName.c_str(), 40);
+  WiFiManagerParameter custom_mqtt_server("server", "MQTT server", mqttServer.c_str(), 40);
+  WiFiManagerParameter custom_mqtt_port("port", "MQTT port", mqttPort.c_str(), 6);
+  WiFiManagerParameter custom_mqtt_username("username", "MQTT Username", mqttUserName.c_str(), 20 );
+  WiFiManagerParameter custom_mqtt_password("password", "MQTT Password", mqttPassword.c_str(), 40 );
+  wm.addParameter(&custom_spa_name);
+  wm.addParameter(&custom_mqtt_server);
+  wm.addParameter(&custom_mqtt_port);
+  wm.addParameter(&custom_mqtt_username);
+  wm.addParameter(&custom_mqtt_password);
+  wm.setBreakAfterConfig(true);
+  wm.setSaveConfigCallback(std::bind(&WebUI::wifiManagerSaveConfigCallback, this));
+  wm.setConnectTimeout(300); //close the WiFiManager after 300 seconds of inactivity
+
+  _wifiManagerSaveConfig = false;
+
+  wm.startConfigPortal();
+  debugI("Exiting Portal");
+
+  if (_wifiManagerSaveConfig) {
+    spaName = String(custom_spa_name.getValue());
+    mqttServer = String(custom_mqtt_server.getValue());
+    mqttPort = String(custom_mqtt_port.getValue());
+    mqttUserName = String(custom_mqtt_username.getValue());
+    mqttPassword = String(custom_mqtt_password.getValue());
+
+    writeConfigFile();
+  }
+}
+
+
 void WebUI::begin() {
         
     #if defined(ESP8266)
@@ -146,7 +187,7 @@ void WebUI::begin() {
 
     server->on("/wifi-manager", HTTP_GET, [&]() {
         debugD("uri: %s", server->uri().c_str());
-        triggerWiFiManager = true;
+        WebUI::startWiFiManager();
         server->sendHeader("Connection", "close");
         server->send(200, "text/plain", "WiFi Manager launching, connect to ESP WiFi...");
     });
