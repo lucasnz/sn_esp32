@@ -390,6 +390,45 @@ window.onload = fetchDataAndPopulateTable;
 </body>
 </html>)";
 
+static constexpr const char *commandTemplate PROGMEM =
+R"(<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<link rel="stylesheet" href="/styles.css">
+<title>Debug</title>
+</head>
+<body>
+<h1>Debug</h1>
+<form id='command_form' action='#' method='POST'>
+<input type='text' name='command' id='command'>
+<input type='submit' value='Send'>
+</form>
+<div id='msg'></div>
+<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>
+<script>
+document.addEventListener("DOMContentLoaded", spaCommand);
+$('#command_form').submit(function (e) {
+  e.preventDefault(); // Prevent form submission
+  $.ajax({
+    url: '/debug',
+    type: 'POST',
+    data: $('#command_form').serialize(),
+    success: function (response) {
+      // Display the server's response in the 'msg' div
+      $('#msg').html(`<p style="color:green;">Response: ${response}</p>`);
+    },
+    error: function () {
+      // Display an error message
+      $('#msg').html('<p style="color:red;">Error, Response: ${response}</p>');
+    }
+  });
+});
+</script>
+</body>
+</html>)";
+
 };
 
 #endif // WEBUI_H

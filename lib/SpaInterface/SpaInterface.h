@@ -118,6 +118,10 @@ class SpaInterface : public SpaProperties {
         /// @brief Clear the call back function.
         void clearUpdateCallback();
 
+        /// @brief Send an arbitary command to the spa
+        /// @param cmd
+        String spaCommand(String cmd) { return sendCommandReturnResult(cmd); };
+
         /// @brief Set the desired water temperature
         /// @param temp Between 5 and 40 in 0.5 increments
         /// @return Returns True if succesful

@@ -171,6 +171,22 @@ void WebUI::begin() {
         server->send(200, "text/plain", si.statusResponse.getValue());
     });
 
+    server->on("/debug", HTTP_GET, [&]() {
+        debugD("uri: %s", server->uri().c_str());
+        server->sendHeader("Connection", "close");
+        server->send(200, "text/html", WebUI::commandTemplate);
+    });
+
+    server->on("/debug", HTTP_POST, [&]() {
+        if (server->hasArg("command")) {
+            SpaInterface &si = *_spa;
+            server->send(200, "text/plain", si.spaCommand(server->arg("command")));
+        }
+        else {
+            server->send(400, "text/plain", "Invalid temperature value");
+        }
+    });
+
     server->begin();
 
     initialised = true;
