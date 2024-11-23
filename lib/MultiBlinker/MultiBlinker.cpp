@@ -1,7 +1,5 @@
 #include "MultiBlinker.h"
 
-#include <RemoteDebug.h>
-
 MultiBlinker::MultiBlinker(int led1, int led2, int led3, int led4) {
     ledPins[0] = led1;
     ledPins[1] = led2;
@@ -23,8 +21,18 @@ void MultiBlinker::setState(int state) {
     if (state == currentState) {
         return;
     }
+    debugV("state: %i: ", state);
     currentState = state;
-    interval = INTERVAL_MULTIPLIER * state;
+    if (numLeds == 1 && state != 0) {
+        updateLEDs();
+        if (state == -1) {
+            interval = 3000;
+        } else {
+            interval = INTERVAL_MULTIPLIER * state;
+        }
+    } else {
+        interval = MULTI_BLINKER_INTERVAL;
+    }
 }
 
 void MultiBlinker::start() {
@@ -54,13 +62,9 @@ void MultiBlinker::runTask(void *pvParameters) {
 void MultiBlinker::run() {
     while (running) {
         ulong currentTime = millis();
-        if (currentTime - lastUpdate >= MULTI_BLINKER_INTERVAL) {
+        if (currentTime - lastUpdate >= interval) {
             lastUpdate = currentTime;
-            if (currentState == -1) {
-                knightRider();
-            } else {
-                updateLEDs();
-            }
+            updateLEDs();
         }
         vTaskDelay(10 / portTICK_PERIOD_MS); // Small delay to prevent task from hogging the CPU
     }
@@ -68,12 +72,22 @@ void MultiBlinker::run() {
 
 void MultiBlinker::updateLEDs() {
     if (numLeds == 1) {
-        // Blink the single LED using the interval value - where the interval is multiplied by the state (so it gets slower as the state increases)
-        bool newState = !digitalRead(ledPins[0]);
-        digitalWrite(ledPins[0], newState);
+        if (currentState == 0) {
+            if (digitalRead(ledPins[0])) digitalWrite(ledPins[0], LOW);
+        } else if (currentState == STATE_STARTED_WIFI_AP) {
+            if (!digitalRead(ledPins[0])) digitalWrite(ledPins[0], HIGH);
+        } else {
+            // Blink the single LED using the interval value - where the interval is multiplied by the state (so it gets slower as the state increases)
+            bool newState = !digitalRead(ledPins[0]);
+            digitalWrite(ledPins[0], newState);
+        }
     } else if (numLeds == 4) {
-        for (int i = 0; i < 4; i++) {
-            digitalWrite(ledPins[i], (currentState & (1 << (3 - i))) ? HIGH : LOW);
+        if (currentState == -1) {
+            knightRider();
+        } else {
+            for (int i = 0; i < 4; i++) {
+                digitalWrite(ledPins[i], (currentState & (1 << (3 - i))) ? HIGH : LOW);
+            }
         }
     }
 }
