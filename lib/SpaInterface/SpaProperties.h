@@ -6,6 +6,9 @@
 #include <time.h>
 #include <TimeLib.h>
 #include <array>
+#if defined(CT_CLAMP_PIN)
+  #include "PowerMonitor.h"
+#endif
 
 extern RemoteDebug Debug;
 
@@ -193,6 +196,9 @@ protected:
 class SpaProperties {
     protected:
         void updateMeasures(String statusResponseRaw[], int R2, int R3, int R4, int R5, int R6, int R7, int R9, int RA, int RB, int RC, int RE, int RG);
+        #if defined(CT_CLAMP_PIN)
+          PowerMonitor powerMonitor;
+        #endif
 
     public:
 

@@ -33,6 +33,13 @@ void SpaInterface::setUpdateFrequency(int updateFrequency) {
     _updateFrequency = updateFrequency;
 }
 
+#if defined(CT_CLAMP_PIN)
+void SpaInterface::setupCtClamp(uint8_t currentPin, double currentCalibration) {
+    powerMonitor.setCurrentPin(currentPin);
+    powerMonitor.setCurrentCalibration(currentCalibration);
+}
+#endif
+
 void SpaInterface::flushSerialReadBuffer() {
     int x = 0;
 
@@ -417,11 +424,19 @@ void SpaInterface::updateStatus() {
         _nextUpdateDue = millis() + (_updateFrequency * 1000);
         _initialised = true;
         if (updateCallback != nullptr) { updateCallback(); }
+        #if defined(CT_CLAMP_PIN)
+            powerMonitor.setMidnightTime(SpaTime.getValue());
+            powerMonitor.setVoltage(MainsVoltage.getValue());
+        #endif
     }
 }
 
 
 void SpaInterface::loop(){
+    #if defined(CT_CLAMP_PIN)
+        powerMonitor.loop();
+    #endif
+
     if ( _lastWaitMessage + 1000 < millis()) {
         debugD("Waiting...");
         _lastWaitMessage = millis();

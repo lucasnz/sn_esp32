@@ -31,6 +31,10 @@ bool Config::readConfigFile() {
       if (json["mqtt_password"].is<String>()) MqttPassword.setValue(json["mqtt_password"].as<String>());
       if (json["spa_name"].is<String>()) SpaName.setValue(json["spa_name"].as<String>());
       if (json["update_frequency"].is<int>()) UpdateFrequency.setValue(json["update_frequency"].as<int>());
+      #if defined(CT_CLAMP_PIN)
+        if (json["ct_clamp_GPIO"].is<int>()) ctClampGPIO.setValue(json["ct_clamp_GPIO"].as<int>());
+        if (json["ct_clamp_calibration"].is<int>()) ctClampCalibration.setValue(json["ct_clamp_calibration"].as<int>());
+      #endif
     } else {
       debugW("Failed to parse config file");
     }
@@ -51,6 +55,10 @@ void Config::writeConfigFile() {
   json["mqtt_password"] = MqttPassword.getValue();
   json["spa_name"] = SpaName.getValue();
   json["update_frequency"] = UpdateFrequency.getValue();
+  #if defined(CT_CLAMP_PIN)
+    json["ct_clamp_GPIO"] = ctClampGPIO.getValue();
+    json["ct_clamp_calibration"] = ctClampCalibration.getValue();
+  #endif
 
   File configFile = LittleFS.open("/config.json", "w");
   if (!configFile) {

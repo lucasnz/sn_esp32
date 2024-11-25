@@ -13,7 +13,11 @@ std::function<bool(const char*, bool)> Property<bool>::_sendCallback = nullptr;
 
 void SpaProperties::updateMeasures(String statusResponseRaw[], int R2, int R3, int R4, int R5, int R6, int R7, int R9, int RA, int RB, int RC, int RE, int RG) {
     #pragma region R2
+#if defined(CT_CLAMP_PIN)
+    MainsCurrent.updateValue(String(int (powerMonitor.getInstantaneousCurrent()*10)));
+#else
     MainsCurrent.updateValue(statusResponseRaw[R2+1]);
+#endif
     MainsVoltage.updateValue(statusResponseRaw[R2+2]);
     CaseTemperature.updateValue(statusResponseRaw[R2+3]);
     PortCurrent.updateValue(statusResponseRaw[R2+4]);
@@ -80,10 +84,17 @@ void SpaProperties::updateMeasures(String statusResponseRaw[], int R2, int R3, i
     PumpRunTimer.updateValue(statusResponseRaw[R4+7]);
     AdtPoolHys.updateValue(statusResponseRaw[R4+8]);
     AdtHeaterHys.updateValue(statusResponseRaw[R4+9]);
+#if defined(CT_CLAMP_PIN)
+    Power.updateValue(String(int (powerMonitor.getInstantaneousPower()*10)));
+    Power_kWh.updateValue(String(int (powerMonitor.getPowerConsumedTotal()*100)));
+    Power_Today.updateValue(String(int (powerMonitor.getPowerConsumedToday()*100)));
+    Power_Yesterday.updateValue(String(int (powerMonitor.getPowerConsumedYesterday()*100)));
+#else
     Power.updateValue(statusResponseRaw[R4+10]);
     Power_kWh.updateValue(statusResponseRaw[R4+11]);
     Power_Today.updateValue(statusResponseRaw[R4+12]);
     Power_Yesterday.updateValue(statusResponseRaw[R4+13]);
+#endif
     ThermalCutOut.updateValue(statusResponseRaw[R4+14]);
     Test_D1.updateValue(statusResponseRaw[R4+15]);
     Test_D2.updateValue(statusResponseRaw[R4+16]);

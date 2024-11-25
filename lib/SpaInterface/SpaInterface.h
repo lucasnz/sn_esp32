@@ -100,6 +100,13 @@ class SpaInterface : public SpaProperties {
         /// @param updateFrequency
         void setUpdateFrequency(int updateFrequency);
 
+        #if defined(CT_CLAMP_PIN)
+          /// @brief configure ct clamp.
+          /// @param currentPin the pin that the ct clamp is connected to
+          /// @param currentCalibration the calibration value for the ct clamp
+          void setupCtClamp(uint8_t currentPin, double currentCalibration);
+        #endif
+
         /// @brief Complete RF command response in a single string
         Property<String> statusResponse = Property<String>("statusResponse");
 

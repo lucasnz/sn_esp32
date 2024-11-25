@@ -106,6 +106,10 @@ void WebUI::begin() {
         if (server->hasArg("mqttUsername")) _config->MqttUsername.setValue(server->arg("mqttUsername"));
         if (server->hasArg("mqttPassword")) _config->MqttPassword.setValue(server->arg("mqttPassword"));
         if (server->hasArg("updateFrequency")) _config->UpdateFrequency.setValue(server->arg("updateFrequency").toInt());
+        #if defined(CT_CLAMP_PIN)
+            if (server->hasArg("ctClampGPIO")) _config->ctClampGPIO.setValue(server->arg("ctClampGPIO").toInt());
+            if (server->hasArg("ctClampCalibration")) _config->ctClampCalibration.setValue(server->arg("ctClampCalibration").toInt());
+        #endif
         _config->writeConfigFile();
         server->sendHeader("Connection", "close");
         server->send(200, "text/plain", "Updated");
@@ -116,9 +120,13 @@ void WebUI::begin() {
         String configJson = "{";
         configJson += "\"spaName\":\"" + _config->SpaName.getValue() + "\",";
         configJson += "\"mqttServer\":\"" + _config->MqttServer.getValue() + "\",";
-        configJson += "\"mqttPort\":\"" + String(_config->MqttPort.getValue()) + "\",";
+        configJson += "\"mqttPort\":" + String(_config->MqttPort.getValue()) + ",";
         configJson += "\"mqttUsername\":\"" + _config->MqttUsername.getValue() + "\",";
         configJson += "\"mqttPassword\":\"" + _config->MqttPassword.getValue() + "\",";
+        #if defined(CT_CLAMP_PIN)
+            configJson += "\"ctClampGPIO\":" + String(_config->ctClampGPIO.getValue()) + ",";
+            configJson += "\"ctClampCalibration\":" + String(_config->ctClampCalibration.getValue()) + ",";
+        #endif
         configJson += "\"updateFrequency\":" + String(_config->UpdateFrequency.getValue());
         configJson += "}";
         server->send(200, "application/json", configJson);

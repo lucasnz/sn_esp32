@@ -36,10 +36,6 @@ PubSubClient mqttClient(wifi);
 
 WebUI ui(&si, &config);
 
-#if defined(CT_CLAMP)
-  PowerMonitor powerMonitor(4, 15.0, 239.0);
-#endif
-
 bool WMsaveConfig = false;
 ulong mqttLastConnect = 0;
 ulong wifiLastConnect = millis();
@@ -144,6 +140,11 @@ void configChangeCallbackString(const char* name, String value) {
 void configChangeCallbackInt(const char* name, int value) {
   debugD("%s: %i", name, value);
   if (strcmp(name, "UpdateFrequency") == 0) si.setUpdateFrequency(value);
+  #if defined(CT_CLAMP_PIN)
+    if (strcmp(name, "ctClampGPIO") == 0 || strcmp(name, "ctClampCalibration") == 0) {
+      si.setupCtClamp(config.ctClampGPIO.getValue(), config.ctClampCalibration.getValue());
+    }
+  #endif
 }
 
 void mqttHaAutoDiscovery() {
@@ -598,13 +599,12 @@ void setup() {
   ui.begin();
   ui.setWifiManagerCallback(startWifiManagerCallback);
   si.setUpdateFrequency(config.UpdateFrequency.getValue());
+  #if defined(CT_CLAMP_PIN)
+    si.setupCtClamp(config.ctClampGPIO.getValue(), config.ctClampCalibration.getValue());
+  #endif
 
   config.setCallback(configChangeCallbackString);
   config.setCallback(configChangeCallbackInt);
-
-  #if defined(CT_CLAMP)
-    powerMonitor.setup();
-  #endif
 
 }
 
@@ -619,9 +619,6 @@ void loop() {
     led.tick();
   #endif
   mqttClient.loop();
-  #if defined(CT_CLAMP)
-    powerMonitor.loop();
-  #endif
   Debug.handle();
 
   if (ui.initialised) { 
