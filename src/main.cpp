@@ -13,6 +13,7 @@
 #include "SpaUtils.h"
 #include "HAAutoDiscovery.h"
 #include "MQTTClientWrapper.h"
+#include "PowerMonitor.h"
 
 //define stringify function
 #define xstr(a) str(a)
@@ -37,7 +38,9 @@ MQTTClientWrapper mqttClient(wifi);
 
 WebUI ui(&si, &config, &mqttClient);
 
-
+#if defined(CT_CLAMP)
+  PowerMonitor powerMonitor(4, 15.0, 239.0);
+#endif
 
 bool WMsaveConfig = false;
 ulong mqttLastConnect = 0;
@@ -591,6 +594,10 @@ void setup() {
   config.setCallback(configChangeCallbackString);
   config.setCallback(configChangeCallbackInt);
 
+  #if defined(CT_CLAMP)
+    powerMonitor.setup();
+  #endif
+
 }
 
 
@@ -599,6 +606,9 @@ void loop() {
   checkButton();
   
   mqttClient.loop();
+  #if defined(CT_CLAMP)
+    powerMonitor.loop();
+  #endif
   Debug.handle();
 
   if (ui.initialised) { 
