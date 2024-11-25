@@ -232,8 +232,12 @@ R"(<!DOCTYPE html>
 <tr><td>MQTT Port:</td><td><input type='number' name='mqttPort' id='mqttPort'></td></tr>
 <tr><td>MQTT Username:</td><td><input type='text' name='mqttUsername' id='mqttUsername'></td></tr>
 <tr><td>MQTT Password:</td><td><input type='text' name='mqttPassword' id='mqttPassword'></td></tr>
-<tr><td>Poll Frequency (seconds):</td><td><input type='number' name='updateFrequency' id='updateFrequency' step="1" min="10" max="300"></td></tr>
-</table>
+<tr><td>Poll Frequency (seconds):</td><td><input type='number' name='updateFrequency' id='updateFrequency' step="1" min="10" max="300"></td></tr>)"
+#if defined(CT_CLAMP_PIN)
+R"(<tr><td>CT Clamp GPIO (zero disabled):</td><td><input type='number' name='ctClampGPIO' id='ctClampGPIO' step="1" min="0" max="39"></td></tr>
+<tr><td>CT Clamp Calibration:</td><td><input type='number' name='ctClampCalibration' id='ctClampCalibration' step="1" min="1" max="500"></td></tr>)"
+#endif
+R"(</table>
 <input type='submit' value='Save'>
 </form>
 <div id='msg'></div>
@@ -248,8 +252,12 @@ function loadConfig() {
       document.getElementById('mqttPort').value = data.mqttPort;
       document.getElementById('mqttUsername').value = data.mqttUsername;
       document.getElementById('mqttPassword').value = data.mqttPassword;
-      document.getElementById('updateFrequency').value = data.updateFrequency;
-    })
+      document.getElementById('updateFrequency').value = data.updateFrequency;)"
+#if defined(CT_CLAMP_PIN)
+R"(      document.getElementById('ctClampGPIO').value = data.ctClampGPIO;
+      document.getElementById('ctClampCalibration').value = data.ctClampCalibration;)"
+#endif
+R"(    })
   .catch(error => console.error('Error loading config:', error));
 }
 document.addEventListener("DOMContentLoaded", loadConfig);

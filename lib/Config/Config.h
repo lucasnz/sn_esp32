@@ -70,6 +70,10 @@ public:
     Setting<String> MqttPassword = Setting<String>("MqttPassword");
     Setting<String> SpaName = Setting<String>("SpaName", "MySpa");
     Setting<int> UpdateFrequency = Setting<int>("UpdateFrequency", 60, 10, 300);
+    #if defined(CT_CLAMP_PIN)
+        Setting<int> ctClampGPIO = Setting<int>("ctClampGPIO", 0, 0, 39);
+        Setting<int> ctClampCalibration = Setting<int>("ctClampCalibration", 15, 1, 500);
+    #endif
 };
 
 class Config : public ControllerConfig {

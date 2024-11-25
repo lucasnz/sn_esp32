@@ -2,41 +2,50 @@
 #define POWERMONITOR_H
 
 #include <Arduino.h>
+#include <TimeLib.h>
 #include <RemoteDebug.h>
 
 extern RemoteDebug Debug;
 
 class PowerMonitor {
 public:
-    // Constructor
-    PowerMonitor(uint8_t currentPin, double currentCalibration, double voltage);
+    PowerMonitor();
 
-    // Setup function
-    void setup();
-
-    // Loop function
+    void setup(uint8_t currentPin, double currentCalibration, double voltage);
     void loop();
 
-    // Accessor methods
-    double getInstantaneousCurrent();     // Returns the instantaneous current in Amps
-    double getInstantaneousPower();      // Returns the instantaneous power in Watts
-    double getPowerConsumedLastHour();   // Returns power consumed in the last hour in kWh
-    double getPowerConsumedToday();      // Returns power consumed today in kWh
-    double getPowerConsumedYesterday();  // Returns power consumed yesterday in kWh
+    double getInstantaneousCurrent();
+    double getInstantaneousPower();
+    double getPowerConsumerLastHour() { return _powerConsumedLastHour; };
+    double getPowerConsumedToday() { return _powerConsumedToday; };
+    double getPowerConsumedYesterday() { return _powerConsumedYesterday; };
+    double getPowerConsumedTotal() { return _powerConsumedTotal; };
+    void setMidnightTime(time_t tm);
+    void setVoltage(int v) { _voltage = v; };
+    void setCurrentPin(int p);
+    void setCurrentCalibration(int c) { _currentCalibration = c; };
 
 private:
-    EnergyMonitor emon; // Instance of the EnergyMonitor class
+    double _offset;
     double _voltage;
     uint8_t _currentPin;
     double _currentCalibration;
 
-    unsigned long _lastUpdateTime;  // Time of the last update in milliseconds
-    unsigned long _hourStartTime;  // Start time of the current hour in milliseconds
-    unsigned long _midnightTime;   // Start time of the current day in milliseconds
+    unsigned long _lastUpdateTime;
+    double _instantaneousCurrent;
+    double _instantaneousPower;
+    unsigned long _lastMinuteTime;
+    unsigned long _midnightTime;
 
-    double _powerConsumedThisHour;  // Energy consumed in the last hour in kWh
-    double _powerConsumedToday;     // Energy consumed today in kWh
-    double _powerConsumedYesterday; // Energy consumed yesterday in kWh
+    double _minuteEnergy[60]; // Circular buffer to store energy for the last 60 minutes
+    int _currentMinuteIndex; // Index of the current minute in the buffer
+    double _powerConsumedLastHour;
+    double _powerConsumedToday;
+    double _powerConsumedYesterday;
+    double _powerConsumedTotal;
+
+    double calcIrms(uint16_t numSamples);
+    double calculateLastHourEnergy(); // Helper function to calculate the rolling hour energy
 };
 
 #endif // POWERMONITOR_H

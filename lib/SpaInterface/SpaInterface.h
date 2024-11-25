@@ -6,12 +6,18 @@
 #include <stdexcept>
 #include <RemoteDebug.h>
 #include "SpaProperties.h"
+#if defined(CT_CLAMP_PIN)
+  #include "PowerMonitor.h"
+#endif
 
 extern RemoteDebug Debug;
 #define FAILEDREADFREQUENCY 1000 //(ms) Frequency to retry on a failed read of the status registers.
 
 class SpaInterface : public SpaProperties {
     private:
+        #if defined(CT_CLAMP_PIN)
+          PowerMonitor powerMonitor;
+        #endif
 
         /// @brief How often to pole the spa for updates in seconds.
         int _updateFrequency = 60;
@@ -100,6 +106,13 @@ class SpaInterface : public SpaProperties {
         /// @brief configure how often the spa is polled in seconds.
         /// @param updateFrequency
         void setUpdateFrequency(int updateFrequency);
+
+        #if defined(CT_CLAMP_PIN)
+          /// @brief configure ct clamp.
+          /// @param currentPin the pin that the ct clamp is connected to
+          /// @param currentCalibration the calibration value for the ct clamp
+          void setupCtClamp(uint8_t currentPin, double currentCalibration);
+        #endif
 
         /// @brief Complete RF command response in a single string
         Property<String> statusResponse;

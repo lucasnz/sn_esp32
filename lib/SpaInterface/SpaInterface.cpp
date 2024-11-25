@@ -2,11 +2,16 @@
 
 #define BAUD_RATE 38400
 
+#if defined(CT_CLAMP_PIN)
+    PowerMonitor powerMonitor();
+#endif
+
 SpaInterface::SpaInterface() : port(SPA_SERIAL) {
     SPA_SERIAL.setRxBufferSize(1024);  //required for unit testing
     SPA_SERIAL.setTxBufferSize(1024);  //required for unit testing
     SPA_SERIAL.begin(BAUD_RATE, SERIAL_8N1, RX_PIN, TX_PIN);
     SPA_SERIAL.setTimeout(250);
+
 }
 
 SpaInterface::~SpaInterface() {}
@@ -15,6 +20,13 @@ SpaInterface::~SpaInterface() {}
 void SpaInterface::setUpdateFrequency(int updateFrequency) {
     _updateFrequency = updateFrequency;
 }
+
+#if defined(CT_CLAMP_PIN)
+void SpaInterface::setupCtClamp(uint8_t currentPin, double currentCalibration) {
+    powerMonitor.setCurrentPin(currentPin);
+    powerMonitor.setCurrentCalibration(currentCalibration);
+}
+#endif
 
 void SpaInterface::flushSerialReadBuffer() {
     int x = 0;
@@ -458,11 +470,19 @@ void SpaInterface::updateStatus() {
         _nextUpdateDue = millis() + (_updateFrequency * 1000);
         _initialised = true;
         if (updateCallback != nullptr) { updateCallback(); }
+        #if defined(CT_CLAMP_PIN)
+            powerMonitor.setMidnightTime(getSpaTime());
+            powerMonitor.setVoltage(getMainsVoltage());
+        #endif
     }
 }
 
 
 void SpaInterface::loop(){
+    #if defined(CT_CLAMP_PIN)
+        powerMonitor.loop();
+    #endif
+
     if ( _lastWaitMessage + 1000 < millis()) {
         debugD("Waiting...");
         _lastWaitMessage = millis();
@@ -491,7 +511,11 @@ void SpaInterface::clearUpdateCallback() {
 
 void SpaInterface::updateMeasures() {
     #pragma region R2
+#if defined(CT_CLAMP_PIN)
+    update_MainsCurrent(String(int (powerMonitor.getInstantaneousCurrent()*10)));
+#else
     update_MainsCurrent(statusResponseRaw[R2+1]);
+#endif
     update_MainsVoltage(statusResponseRaw[R2+2]);
     update_CaseTemperature(statusResponseRaw[R2+3]);
     update_PortCurrent(statusResponseRaw[R2+4]);
@@ -551,10 +575,17 @@ void SpaInterface::updateMeasures() {
     update_PumpRunTimer(statusResponseRaw[R4+7]);
     update_AdtPoolHys(statusResponseRaw[R4+8]);
     update_AdtHeaterHys(statusResponseRaw[R4+9]);
+#if defined(CT_CLAMP_PIN)
+    update_Power(String(int (powerMonitor.getInstantaneousPower()*10)));
+    update_Power_kWh(String(int (powerMonitor.getPowerConsumedTotal()*100)));
+    update_Power_Today(String(int (powerMonitor.getPowerConsumedToday()*100)));
+    update_Power_Yesterday(String(int (powerMonitor.getPowerConsumedYesterday()*100)));
+#else
     update_Power(statusResponseRaw[R4+10]);
     update_Power_kWh(statusResponseRaw[R4+11]);
     update_Power_Today(statusResponseRaw[R4+12]);
     update_Power_Yesterday(statusResponseRaw[R4+13]);
+#endif
     update_ThermalCutOut(statusResponseRaw[R4+14]);
     update_Test_D1(statusResponseRaw[R4+15]);
     update_Test_D2(statusResponseRaw[R4+16]);
