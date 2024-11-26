@@ -15,6 +15,7 @@
 #include "SpaInterface.h"
 #include "SpaUtils.h"
 #include "HAAutoDiscovery.h"
+#include "PowerMonitor.h"
 
 //define stringify function
 #define xstr(a) str(a)
@@ -35,7 +36,9 @@ PubSubClient mqttClient(wifi);
 
 WebUI ui(&si, &config);
 
-
+#if defined(CT_CLAMP)
+  PowerMonitor powerMonitor(4, 15.0, 239.0);
+#endif
 
 bool WMsaveConfig = false;
 ulong mqttLastConnect = 0;
@@ -599,6 +602,10 @@ void setup() {
   config.setCallback(configChangeCallbackString);
   config.setCallback(configChangeCallbackInt);
 
+  #if defined(CT_CLAMP)
+    powerMonitor.setup();
+  #endif
+
 }
 
 
@@ -612,6 +619,9 @@ void loop() {
     led.tick();
   #endif
   mqttClient.loop();
+  #if defined(CT_CLAMP)
+    powerMonitor.loop();
+  #endif
   Debug.handle();
 
   if (ui.initialised) { 
