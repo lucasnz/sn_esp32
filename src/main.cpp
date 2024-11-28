@@ -256,12 +256,12 @@ void mqttHaAutoDiscovery() {
   ADConf.entityCategory = "";
   for (int pumpNumber = 1; pumpNumber <= 5; pumpNumber++) {
     String pumpInstallState = (si.*(pumpInstallStateFunctions[pumpNumber - 1]))();
-    if (pumpInstallState.startsWith("1") && !(pumpInstallState.endsWith("4"))) {
+    if (getPumpInstalledState(pumpInstallState)) {
       ADConf.displayName = "Pump " + String(pumpNumber);
       ADConf.propertyId = "pump" + String(pumpNumber);
       ADConf.valueTemplate = "{{ value_json.pumps.pump" + String(pumpNumber) + " }}";
       const std::array<int, 0> emptyOptions;
-      if (getPumpSpeedType(pumpInstallState) == "1") {
+      if (getPumpSpeedType(pumpInstallState) == "1" && !(pumpInstallState.endsWith("4"))) { // is the not endsWith(4) relavant to single speed pumps?
         generateFanAdJSON(output, ADConf, spa, discoveryTopic, 0, 0, emptyOptions);
       } else {
         generateFanAdJSON(output, ADConf, spa, discoveryTopic, getPumpSpeedMin(pumpInstallState), getPumpSpeedMax(pumpInstallState), emptyOptions);
@@ -442,22 +442,27 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   } else if (property == "pump1_state") {
     si.setRB_TP_Pump1(p=="OFF"?0:1);
   } else if (property == "pump1_speed") {
+    if (p == "1") p = "0"; // pump speed is only used for multi speed pumps. HA returns 1 for speed off.
     si.setRB_TP_Pump1(p.toInt());
   } else if (property == "pump2_state") {
     si.setRB_TP_Pump2(p=="OFF"?0:1);
   } else if (property == "pump2_speed") {
+    if (p == "1") p = "0"; // pump speed is only used for multi speed pumps. HA returns 1 for speed off.
     si.setRB_TP_Pump2(p.toInt());
   } else if (property == "pump3_state") {
     si.setRB_TP_Pump3(p=="OFF"?0:1);
   } else if (property == "pump3_speed") {
+    if (p == "1") p = "0"; // pump speed is only used for multi speed pumps. HA returns 1 for speed off.
     si.setRB_TP_Pump3(p.toInt());
   } else if (property == "pump4_state") {
     si.setRB_TP_Pump4(p=="OFF"?0:1);
   } else if (property == "pump4_speed") {
+    if (p == "1") p = "0"; // pump speed is only used for multi speed pumps. HA returns 1 for speed off.
     si.setRB_TP_Pump4(p.toInt());
   } else if (property == "pump5_state") {
     si.setRB_TP_Pump5(p=="OFF"?0:1);
   } else if (property == "pump5_speed") {
+    if (p == "1") p = "0"; // pump speed is only used for multi speed pumps. HA returns 1 for speed off.
     si.setRB_TP_Pump5(p.toInt());
   } else if (property == "heatpump_auxheat") {
     si.setHELE(p=="OFF"?0:1);

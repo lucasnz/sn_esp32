@@ -85,8 +85,7 @@ bool getPumpModesJson(SpaInterface &si, int pumpNumber, JsonObject pumps) {
 }
 
 bool getPumpInstalledState(String pumpInstallState) {
-  int firstDash = pumpInstallState.indexOf("-");
-  return (pumpInstallState.substring(0, firstDash) == "1");
+  return pumpInstallState.startsWith("1");
 }
 
 String getPumpSpeedType(String pumpInstallState) {
@@ -104,8 +103,8 @@ int getPumpSpeedMax(String pumpInstallState) {
   String possibleStates = getPumpPossibleStates(pumpInstallState);
   uint max = 0;
   for (uint i = 0; i < possibleStates.length(); i++) {
-    char stateChar = possibleStates.charAt(i);
-    if (stateChar != '4' && stateChar > max) max = stateChar;
+    int pumpMode = possibleStates.charAt(i)  - '0';
+    if (pumpMode != '4' && pumpMode > max) max = pumpMode;
   }
   return max;
 }
@@ -114,8 +113,8 @@ int getPumpSpeedMin(String pumpInstallState) {
   String possibleStates = getPumpPossibleStates(pumpInstallState);
   uint min = UINT_MAX;
   for (uint i = 0; i < possibleStates.length(); i++) {
-    char stateChar = possibleStates.charAt(i);
-    if (stateChar != '0' && stateChar < min) min = stateChar;
+    int pumpMode = possibleStates.charAt(i)  - '0';
+    if (pumpMode != 0 && pumpMode < min) min = pumpMode;
   }
   return min;
 }
