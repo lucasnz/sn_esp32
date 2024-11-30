@@ -252,4 +252,16 @@ static GetPumpStateFunction pumpStateFunctions[] = {
   &SpaInterface::getRB_TP_Pump5
 };
 
+// Define the function pointer type for getPumpState functions
+typedef bool (SpaInterface::*SetPumpFunction)(int);
+
+// Declare the array of function pointers for each pump's state as static
+static SetPumpFunction setPumpFunctions[] = {
+  &SpaInterface::setRB_TP_Pump1,
+  &SpaInterface::setRB_TP_Pump2,
+  &SpaInterface::setRB_TP_Pump3,
+  &SpaInterface::setRB_TP_Pump4,
+  &SpaInterface::setRB_TP_Pump5
+};
+
 #endif

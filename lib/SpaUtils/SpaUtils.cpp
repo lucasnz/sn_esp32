@@ -58,7 +58,8 @@ bool getPumpModesJson(SpaInterface &si, int pumpNumber, JsonObject pumps) {
   pumpKey[5] = '\0';  // Null-terminate the string
 
   pumps[pumpKey]["installed"] = getPumpInstalledState(pumpInstallState);
-  pumps[pumpKey]["speedType"] = getPumpSpeedType(pumpInstallState);
+  String speedType = getPumpSpeedType(pumpInstallState);
+  pumps[pumpKey]["speedType"] = speedType;
 
   String possibleStates = getPumpPossibleStates(pumpInstallState);
   // Convert possibleStates into words and store them in a JSON array
@@ -70,7 +71,7 @@ bool getPumpModesJson(SpaInterface &si, int pumpNumber, JsonObject pumps) {
       pumps[pumpKey]["possibleStates"].add("ON");
     } else if (stateChar == '2') {
       pumps[pumpKey]["possibleStates"].add("LOW");
-    } else if (stateChar == '2') {
+    } else if (stateChar == '3') {
       pumps[pumpKey]["possibleStates"].add("HIGH");
     } else if (stateChar == '4') {
       pumps[pumpKey]["possibleStates"].add("AUTO");
@@ -78,7 +79,12 @@ bool getPumpModesJson(SpaInterface &si, int pumpNumber, JsonObject pumps) {
   }
 
   int pumpState = (si.*(pumpStateFunctions[pumpNumber - 1]))();
-  pumps[pumpKey]["state"] = pumpState==0? "OFF" : "ON"; // we're ignoring auto here
+  if (speedType == "2") {
+    if (pumpState == 4) pumps[pumpKey]["mode"] = "Auto";
+    else pumps[pumpKey]["mode"] = "Manual";
+  }
+  pumps[pumpKey]["state"] = pumpState==0?"OFF":"ON";
+  if (pumpState == 4) pumpState = 2;
   pumps[pumpKey]["speed"] = pumpState;
 
   return true;
@@ -104,7 +110,7 @@ int getPumpSpeedMax(String pumpInstallState) {
   uint max = 0;
   for (uint i = 0; i < possibleStates.length(); i++) {
     int pumpMode = possibleStates.charAt(i)  - '0';
-    if (pumpMode != '4' && pumpMode > max) max = pumpMode;
+    if (pumpMode > 0 && pumpMode < 4 && pumpMode > max) max = pumpMode;
   }
   return max;
 }
@@ -114,8 +120,9 @@ int getPumpSpeedMin(String pumpInstallState) {
   uint min = UINT_MAX;
   for (uint i = 0; i < possibleStates.length(); i++) {
     int pumpMode = possibleStates.charAt(i)  - '0';
-    if (pumpMode != 0 && pumpMode < min) min = pumpMode;
+    if (pumpMode > 0 && pumpMode < 4 && pumpMode < min) min = pumpMode;
   }
+  if (min == UINT_MAX) min = 0;
   return min;
 }
 

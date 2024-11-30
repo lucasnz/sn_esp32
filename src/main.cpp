@@ -254,17 +254,25 @@ void mqttHaAutoDiscovery() {
 
   ADConf.deviceClass = "";
   ADConf.entityCategory = "";
+  const String* selectedPumpOptions = nullptr;
+  size_t arrSize = 0;
   for (int pumpNumber = 1; pumpNumber <= 5; pumpNumber++) {
     String pumpInstallState = (si.*(pumpInstallStateFunctions[pumpNumber - 1]))();
-    if (getPumpInstalledState(pumpInstallState)) {
+    if (getPumpInstalledState(pumpInstallState) && getPumpPossibleStates(pumpInstallState).length() > 1) {
       ADConf.displayName = "Pump " + String(pumpNumber);
       ADConf.propertyId = "pump" + String(pumpNumber);
       ADConf.valueTemplate = "{{ value_json.pumps.pump" + String(pumpNumber) + " }}";
-      const std::array<int, 0> emptyOptions;
-      if (getPumpSpeedType(pumpInstallState) == "1" && !(pumpInstallState.endsWith("4"))) { // is the not endsWith(4) relavant to single speed pumps?
-        generateFanAdJSON(output, ADConf, spa, discoveryTopic, 0, 0, emptyOptions);
+      if (pumpInstallState.endsWith("4")) {
+        selectedPumpOptions = si.autoPumpOptions.data();
+        arrSize = si.autoPumpOptions.size();
       } else {
-        generateFanAdJSON(output, ADConf, spa, discoveryTopic, getPumpSpeedMin(pumpInstallState), getPumpSpeedMax(pumpInstallState), emptyOptions);
+        selectedPumpOptions = nullptr;
+        arrSize = 0;
+      }
+      if (getPumpSpeedType(pumpInstallState) == "1") {
+        generateFanAdJSON(output, ADConf, spa, discoveryTopic, 0, 0, selectedPumpOptions, arrSize);
+      } else {
+        generateFanAdJSON(output, ADConf, spa, discoveryTopic, getPumpSpeedMin(pumpInstallState), getPumpSpeedMax(pumpInstallState), selectedPumpOptions, arrSize);
       }
       mqttClient.publish(discoveryTopic.c_str(), output.c_str(), true);
     }
@@ -388,7 +396,7 @@ void mqttHaAutoDiscovery() {
   ADConf.propertyId = "blower";
   ADConf.deviceClass = "";
   ADConf.entityCategory = "";
-  generateFanAdJSON(output, ADConf, spa, discoveryTopic, 1, 5, si.blowerStrings);
+  generateFanAdJSON(output, ADConf, spa, discoveryTopic, 1, 5, si.blowerStrings.data(), si.blowerStrings.size());
   mqttClient.publish(discoveryTopic.c_str(), output.c_str(), true);
 
   //selectADPublish(mqttClient, spa, "Spa Mode", "{{ value_json.status.spaMode }}", "status_spaMode", "", "", spaModeStrings);
@@ -439,31 +447,24 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     si.setSTMP(int(p.toFloat()*10));
   } else if (property == "heatpump_mode") {
     si.setHPMP(p);
-  } else if (property == "pump1_state") {
-    si.setRB_TP_Pump1(p=="OFF"?0:1);
-  } else if (property == "pump1_speed") {
-    if (p == "1") p = "0"; // pump speed is only used for multi speed pumps. HA returns 1 for speed off.
-    si.setRB_TP_Pump1(p.toInt());
-  } else if (property == "pump2_state") {
-    si.setRB_TP_Pump2(p=="OFF"?0:1);
-  } else if (property == "pump2_speed") {
-    if (p == "1") p = "0"; // pump speed is only used for multi speed pumps. HA returns 1 for speed off.
-    si.setRB_TP_Pump2(p.toInt());
-  } else if (property == "pump3_state") {
-    si.setRB_TP_Pump3(p=="OFF"?0:1);
-  } else if (property == "pump3_speed") {
-    if (p == "1") p = "0"; // pump speed is only used for multi speed pumps. HA returns 1 for speed off.
-    si.setRB_TP_Pump3(p.toInt());
-  } else if (property == "pump4_state") {
-    si.setRB_TP_Pump4(p=="OFF"?0:1);
-  } else if (property == "pump4_speed") {
-    if (p == "1") p = "0"; // pump speed is only used for multi speed pumps. HA returns 1 for speed off.
-    si.setRB_TP_Pump4(p.toInt());
-  } else if (property == "pump5_state") {
-    si.setRB_TP_Pump5(p=="OFF"?0:1);
-  } else if (property == "pump5_speed") {
-    if (p == "1") p = "0"; // pump speed is only used for multi speed pumps. HA returns 1 for speed off.
-    si.setRB_TP_Pump5(p.toInt());
+  // note single speed pumps should never trigger a mode or speed events
+  } else if (property.startsWith("pump") && property.endsWith("_speed")) {
+    int pumpNum = property.charAt(4) - '0';
+    // p = 1 = Off, p = 2 = Low, p = 3 = High
+    // send values need to be changed to the appropriate values
+    if (p == "1") p = "0";
+    else if (p == "2") p = "3";
+    else if (p == "3") p = "2";
+    (si.*(setPumpFunctions[pumpNum-1]))(p.toInt());
+  } else if (property.startsWith("pump") && property.endsWith("_mode")) {
+    int pumpNum = property.charAt(4) - '0';
+    if (p == "Auto") (si.*(setPumpFunctions[pumpNum-1]))(4);
+    else (si.*(setPumpFunctions[pumpNum-1]))(3); // When we change mode to manual set speed to low, as this matches the auto display speed
+  } else if (property.startsWith("pump") && property.endsWith("_state")) {
+    int pumpNum = property.charAt(4) - '0';
+    String pumpState = (si.*(pumpInstallStateFunctions[pumpNum-1]))();
+    if (getPumpSpeedType(pumpState) == "2") (si.*(setPumpFunctions[pumpNum-1]))(p=="OFF"?0:2); // When we turn on the pump use speed high
+    else (si.*(setPumpFunctions[pumpNum-1]))(p=="OFF"?0:1);
   } else if (property == "heatpump_auxheat") {
     si.setHELE(p=="OFF"?0:1);
   } else if (property == "status_datetime") {
