@@ -9,7 +9,7 @@ on:
 
 jobs:
   pre_job:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # If we push a commit with a new tag, it triggers two workflows.
     #  one for the new commit, one for the new tag.
     # This detects if multiple concurrent workflows are running.
@@ -44,7 +44,7 @@ jobs:
     needs: build
     permissions:
       contents: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repo for CHANGELOG
         uses: actions/checkout@v4
