@@ -25,14 +25,17 @@ bool Config::readConfig() {
     UpdateFrequency.setValue(preferences.getInt("spaPollFreq", 60));
 
     preferences.end();
+    configMode.setValue("Preferences");
     return true;
   } else {
     debugI("Preferences not found, checking for config file");
     if (readConfigFile()) {
       writeConfig();
+      configMode.setValue("File");
       return true;
     }
   }
+  configMode.setValue("Failed");
   return false;
 }
 

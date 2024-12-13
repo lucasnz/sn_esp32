@@ -119,7 +119,8 @@ void WebUI::begin() {
         configJson += "\"mqttPort\":\"" + String(_config->MqttPort.getValue()) + "\",";
         configJson += "\"mqttUsername\":\"" + _config->MqttUsername.getValue() + "\",";
         configJson += "\"mqttPassword\":\"" + _config->MqttPassword.getValue() + "\",";
-        configJson += "\"updateFrequency\":" + String(_config->UpdateFrequency.getValue());
+        configJson += "\"updateFrequency\":" + String(_config->UpdateFrequency.getValue()) + ",";
+        configJson += "\"configMode\":\"" + String(_config->configMode.getValue()) + "\"";
         configJson += "}";
         server->send(200, "application/json", configJson);
     });

@@ -71,6 +71,8 @@ public:
     Setting<String> MqttPassword = Setting<String>("MqttPassword");
     Setting<String> SpaName = Setting<String>("SpaName", "eSpa");
     Setting<int> UpdateFrequency = Setting<int>("UpdateFrequency", 60, 10, 300);
+
+    Setting<String> configMode = Setting<String>("configMode", "undefined");
 };
 
 class Config : public ControllerConfig {

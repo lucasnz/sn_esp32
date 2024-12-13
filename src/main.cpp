@@ -555,6 +555,8 @@ void setup() {
   blinker.setState(STATE_NONE); // start with all LEDs off
   blinker.start();
 
+  delay(10000);
+
   debugA("Starting ESP...");
 
   debugI("Mounting FS");
@@ -575,9 +577,15 @@ void setup() {
 
   WiFi.mode(WIFI_STA);
   WiFi.begin();
+  bootStartMillis = millis();
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     debugA(".");
+    // If we can't connect Wi-Fi start the WiFiManager
+    if (millis() > bootStartMillis + 30000) {
+      startWiFiManager();
+      bootStartMillis = millis();
+    }
   }
   debugA("Connected to Wi-Fi");
 

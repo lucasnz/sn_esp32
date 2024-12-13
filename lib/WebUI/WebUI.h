@@ -233,6 +233,7 @@ R"(<!DOCTYPE html>
 <tr><td>MQTT Username:</td><td><input type='text' name='mqttUsername' id='mqttUsername'></td></tr>
 <tr><td>MQTT Password:</td><td><input type='text' name='mqttPassword' id='mqttPassword'></td></tr>
 <tr><td>Poll Frequency (seconds):</td><td><input type='number' name='updateFrequency' id='updateFrequency' step="1" min="10" max="300"></td></tr>
+<tr><td>Config Mode:</td><td><input type='text' name='configMode' id='configMode'></td></tr>
 </table>
 <input type='submit' value='Save'>
 </form>
@@ -249,6 +250,7 @@ function loadConfig() {
       document.getElementById('mqttUsername').value = data.mqttUsername;
       document.getElementById('mqttPassword').value = data.mqttPassword;
       document.getElementById('updateFrequency').value = data.updateFrequency;
+      document.getElementById('configMode').value = data.configMode;
     })
   .catch(error => console.error('Error loading config:', error));
 }
