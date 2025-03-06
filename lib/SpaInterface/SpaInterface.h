@@ -17,6 +17,7 @@ class SpaInterface : public SpaProperties {
         int _updateFrequency = 60;
 
         /// @brief Number of fields that we can expect to read.
+        static const int statusResponseV2MinFields = 254;
         static const int statusResponseMinFields = 275;
         static const int statusResponseMaxFields = 300;
 

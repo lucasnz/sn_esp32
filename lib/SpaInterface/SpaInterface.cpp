@@ -445,7 +445,7 @@ bool SpaInterface::readStatus() {
             currentRegisterSize = 0;
         }
         // If we reach the last register we have finished reading...
-        if (registerCounter >= 12) break;
+        if (registerCounter >= 12 || (getSVER().startsWith("V2") && registerCounter >= 11)) break;
 
         if (!_initialised) { // We only have to set these on the first read, they never change after that.
             if (statusResponseRaw[field] == "R2") R2 = field;
@@ -472,7 +472,7 @@ bool SpaInterface::readStatus() {
 
     statusResponse.update_Value(statusResponseTmp);
 
-    if (registerCounter < 12) {
+    if ((getSVER().startsWith("V2") && registerCounter < 11) || (!getSVER().startsWith("V2") && registerCounter < 12)) {
         debugE("Throwing exception - not enough registers, we only read: %i", registerCounter);
         return false;
     }
@@ -482,7 +482,7 @@ bool SpaInterface::readStatus() {
         return false;
     }
 
-    if (field < statusResponseMinFields) {
+    if ((!getSVER().startsWith("V2") && field < statusResponseMinFields) || (getSVER().startsWith("V2") && field < statusResponseV2MinFields)) {
         debugE("Throwing exception - %i fields read expecting at least %i",field, statusResponseMinFields);
         return false;
     }
