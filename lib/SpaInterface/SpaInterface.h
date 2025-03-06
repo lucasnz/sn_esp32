@@ -8,7 +8,8 @@
 #include "SpaProperties.h"
 
 extern RemoteDebug Debug;
-#define FAILEDREADFREQUENCY 1000 //(ms) Frequency to retry on a failed read of the status registers.
+#define FAILEDREADFREQUENCY 10000 //(ms) Frequency to retry on a failed read of the status registers.
+#define V2FIRMWARE_STRING "SW V2" // String to identify V2 firmware
 
 class SpaInterface : public SpaProperties {
     private:
@@ -17,7 +18,7 @@ class SpaInterface : public SpaProperties {
         int _updateFrequency = 60;
 
         /// @brief Number of fields that we can expect to read.
-        static const int statusResponseV2MinFields = 254;
+        static const int statusResponseV2MinFields = 253;
         static const int statusResponseMinFields = 275;
         static const int statusResponseMaxFields = 300;
 
@@ -43,7 +44,7 @@ class SpaInterface : public SpaProperties {
           25, //R3
           23, //R4
           22, //R5
-          27, //R6
+          23, //R6
           30, //R7
           12, //R9
           12, //RA
