@@ -43,6 +43,9 @@ ulong mqttLastConnect = 0;
 ulong wifiLastConnect = millis();
 ulong bootTime = millis();
 ulong statusLastPublish = millis();
+#ifdef INCLUDE_UPDATES
+ulong lastFirmwareCheck = 0;
+#endif // INCLUDE_UPDATES
 bool delayedStart = true; // Delay spa connection for 10sec after boot to allow for external debugging if required.
 bool autoDiscoveryPublished = false;
 
@@ -66,8 +69,9 @@ void WMsaveConfigCallback(){
 }
 
 void startWiFiManager(){
-
-  debugD("Starting Wi-Fi Manager...");
+  // if (ui.initialised) {
+  //   ui.server_old->stop();
+  // }
 
   WiFiManager wm;
   WiFiManagerParameter custom_spa_name("spa_name", "Spa Name", config.SpaName.getValue().c_str(), 40);
@@ -97,8 +101,6 @@ void startWiFiManager(){
 
     config.writeConfig();
   }
-
-  ESP.restart(); // Restart the ESP to apply the new settings
 }
 
 // We check the EN_PIN every loop, to allow people to configure the system
@@ -110,6 +112,8 @@ void checkButton(){
     if(digitalRead(EN_PIN) == LOW) {
       debugI("Button press detected. Starting Portal");
       startWiFiManager();
+
+      ESP.restart();  // restart, dirty but easier than trying to restart services one by one
     }
   }
 #endif
@@ -138,9 +142,16 @@ void configChangeCallbackString(const char* name, String value) {
                                   // delete the entities in MQTT then reboot the ESP
 }
 
+void mqttPublishStatus();
+
 void configChangeCallbackInt(const char* name, int value) {
   debugD("%s: %i", name, value);
   if (strcmp(name, "UpdateFrequency") == 0) si.setUpdateFrequency(value);
+#ifdef INCLUDE_UPDATES
+  if (strcmp(name, "updateAvailable") == 0 || strcmp(name, "updateInProgress") == 0 || strcmp(name, "updatePercentage") == 0 || strcmp(name, "updateStatus") == 0) {
+    mqttPublishStatus();
+  }
+#endif // INCLUDE_UPDATES
 }
 
 void mqttHaAutoDiscovery() {
@@ -226,7 +237,7 @@ void mqttHaAutoDiscovery() {
   ADConf.propertyId = "TotalEnergy";
   ADConf.deviceClass = "energy";
   ADConf.entityCategory = "diagnostic";
-  generateSensorAdJSON(output, ADConf, spa, discoveryTopic, "total_increasing", "kWh");
+  generateSensorAdJSON(output, ADConf, spa, discoveryTopic, "measurement", "kWh");
   mqttClient.publish(discoveryTopic.c_str(), output.c_str(), true);
 
   ADConf.displayName = "State";
@@ -428,6 +439,16 @@ void mqttHaAutoDiscovery() {
   generateSelectAdJSON(output, ADConf, spa, discoveryTopic, si.spaModeStrings);
   mqttClient.publish(discoveryTopic.c_str(), output.c_str(), true);
 
+#ifdef INCLUDE_UPDATES
+  ADConf.displayName = "Firmware";
+  ADConf.valueTemplate = "{{ value_json['eSpa']['update'] | to_json }}";
+  ADConf.propertyId = "espa_firmware";
+  ADConf.deviceClass = "firmware";
+  ADConf.entityCategory = "diagnostic";
+  generateUpdateAdJSON(output, ADConf, spa, discoveryTopic);
+  mqttClient.publish(discoveryTopic.c_str(), output.c_str(), true);
+#endif // INCLUDE_UPDATES
+
 }
 
 #pragma region MQTT Publish / Subscribe
@@ -440,7 +461,7 @@ void mqttPublishStatusString(String s){
 
 void mqttPublishStatus() {
   String json;
-  if (generateStatusJson(si, mqttClient, json, false)) {
+  if (generateStatusJson(si, mqttClient, config, json, false)) {
     mqttClient.publish(mqttStatusTopic.c_str(),json.c_str());
   } else {
     debugD("Error generating json");
@@ -534,6 +555,28 @@ void setSpaProperty(String property, String p) {
     si.setL_2SNZ_END(convertToInteger(p));
   } else if (property == "status_spaMode") {
     si.setMode(p);
+#ifdef INCLUDE_UPDATES
+  } else if (property == "espa_firmware") {
+    String firmwareUrl;
+    String spiffsUrl;
+    if (p == "latest") {
+      firmwareUrl = config.firmwareUrl.getValue();
+      spiffsUrl = config.spiffsUrl.getValue();
+    } else {
+      int separatorIndex = p.indexOf('|');
+      if (separatorIndex != -1) {
+        firmwareUrl = p.substring(0, separatorIndex);
+        spiffsUrl = p.substring(separatorIndex + 1);
+      } else {
+        debugE("Invalid firmware URL format");
+        return;
+      }
+    }
+    if (firmwareUrl.length() > 0) {
+      debugI("Updating firmware from %s", firmwareUrl.c_str());
+      updateFirmware(firmwareUrl, spiffsUrl, config, p == "latest");
+    }
+#endif // INCLUDE_UPDATES
   } else {
     debugE("Unhandled property - %s",property.c_str());
   }
@@ -593,32 +636,54 @@ void setup() {
   debugA("Starting ESP...");
 
   if (!config.readConfig()) {
-    debugA("Failed to open config.json, starting Wi-Fi Manager");
+    debugW("Failed to open config.json, starting Wi-Fi Manager");
     startWiFiManager();
   }
 
   blinker.setState(STATE_WIFI_NOT_CONNECTED);
   WiFi.setHostname(sanitizeHostname(config.SpaName.getValue()).c_str());
 
-  WiFi.mode(WIFI_AP_STA);
+  WiFi.mode(WIFI_STA);
   WiFi.begin();
-  WiFi.softAP(WiFi.getHostname(), "eSPA-Password"); // Start the AP with the hostname and a default password
+  int totalTry = 10;
+  while (WiFi.status() != WL_CONNECTED && totalTry > 0) {
+    delay(500);
+    debugA(".");
+    totalTry--;
+  }
+  if (WiFi.status() != WL_CONNECTED) {
+    debugE("Failed to connected to Wi-Fi");
+  } else {
+    debugA("Connected to Wi-Fi");
+  }
 
-  Debug.begin(WiFi.getHostname());  // Hostname seems to be for display purposes only, no functional impact.
-  Debug.setResetCmdEnabled(true);  // This seems to be not needed to be in Setup.
-  Debug.showProfiler(true); // This seems to be not needed to be in Setup.
+  blinker.setState(STATE_NONE); // start with all LEDs off
+
+  Debug.begin(WiFi.getHostname());
+  Debug.setResetCmdEnabled(true);
+  Debug.showProfiler(true);
+
+  totalTry = 5;
+  while (!MDNS.begin(WiFi.getHostname()) && totalTry > 0) {
+    debugW(".");
+    delay(1000);
+    totalTry--;
+  }
+  debugA("mDNS responder started");
 
   mqttClient.setServer(config.MqttServer.getValue(), config.MqttPort.getValue());
   mqttClient.setCallback(mqttCallback);
   mqttClient.setBufferSize(2048);
 
   bootStartMillis = millis();  // Record the current boot time in milliseconds
+#ifdef INCLUDE_UPDATES
+  lastFirmwareCheck = millis() - (config.fwPollFreq.getValue() * 60 * 60 * 1000) + 30000; // check for update 30 seconds after start up.
+#endif // INCLUDE_UPDATES
 
   ui.begin();
-
   ui.setWifiManagerCallback(startWifiManagerCallback);
   ui.setSpaCallback(setSpaCallback);
-  si.setUpdateFrequency(config.UpdateFrequency.getValue());
+  si.setUpdateFrequency(config.spaPollFreq.getValue());
 
   config.setCallback(configChangeCallbackString);
   config.setCallback(configChangeCallbackInt);
@@ -626,10 +691,21 @@ void setup() {
 }
 
 void loop() {  
-
-  checkButton(); // Check if the button is pressed to start Wi-Fi Manager
-
+  checkButton();
+  
+  mqttClient.loop();
   Debug.handle();
+
+  // if (ui.initialised) { 
+  //   ui.server_old->handleClient(); 
+  // }
+
+  if (updateMqtt) {
+    debugD("Changing MQTT settings...");
+    mqttClient.disconnect();
+    mqttClient.setServer(config.MqttServer.getValue(), config.MqttPort.getValue());
+    updateMqtt = false;
+  }
 
   if (setSpaCallbackReady) {
     debugD("Setting Spa Properties...");
@@ -638,27 +714,26 @@ void loop() {
   }
 
   if (WiFi.status() != WL_CONNECTED) {
+    //wifi not connected
     blinker.setState(STATE_WIFI_NOT_CONNECTED);
 
-    if (millis()-wifiLastConnect > 1000) { // Reconnect every second if not connected
+    if (millis()-wifiLastConnect > 10000) {
       debugI("Wifi reconnecting...");
       wifiLastConnect = millis();
-      if (WiFi.reconnect()) {
-        debugI("Wifi reconnected");
-        MDNS.end(); // Stop mDNS responder (if it was running)
-        if (!MDNS.begin(WiFi.getHostname())) {
-          debugE("Failed to start mDNS responder");
-        } else {
-          debugI("mDNS responder restarted");
-        }
-      } else {
-        debugW("Wifi reconnect failed");
-      };
+      WiFi.reconnect();
     }
   } else {
     if (delayedStart) {
       delayedStart = !(bootTime + 10000 < millis());
     } else {
+
+#ifdef INCLUDE_UPDATES
+      if (config.fwPollFreq.getValue() > 0 && millis()-lastFirmwareCheck > (config.fwPollFreq.getValue() * 60 * 60 * 1000)) {
+        firmwareCheckUpdates(config);
+        lastFirmwareCheck = millis();
+      }
+#endif // INCLUDE_UPDATES
+
       si.loop();
 
       if (!si.isInitialised()) {
@@ -717,13 +792,4 @@ void loop() {
       }
     }
   }
-
-  if (updateMqtt) {
-    debugD("Changing MQTT settings...");
-    mqttClient.disconnect();
-    mqttClient.setServer(config.MqttServer.getValue(), config.MqttPort.getValue());
-    updateMqtt = false;
-  }
-
-  mqttClient.loop();
 }
