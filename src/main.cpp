@@ -232,6 +232,7 @@ void mqttHaAutoDiscovery() {
   size_t arrSize = 0;
   for (int pumpNumber = 1; pumpNumber <= 5; pumpNumber++) {
     String pumpInstallState = (si.*(pumpInstallStateFunctions[pumpNumber - 1]))();
+    debugI("Pump %i, installState: %s", pumpNumber, pumpInstallState.c_str());
     if (getPumpInstalledState(pumpInstallState) && getPumpPossibleStates(pumpInstallState).length() > 1) {
       ADConf.displayName = "Pump " + String(pumpNumber);
       ADConf.propertyId = "pump" + String(pumpNumber);
@@ -248,6 +249,7 @@ void mqttHaAutoDiscovery() {
       } else {
         generateFanAdJSON(output, ADConf, spa, discoveryTopic, getPumpSpeedMin(pumpInstallState), getPumpSpeedMax(pumpInstallState), selectedPumpOptions, arrSize);
       }
+      debugI("json output: %s", output.c_str());
       mqttClient.publish(discoveryTopic.c_str(), output.c_str(), true);
     }
   }

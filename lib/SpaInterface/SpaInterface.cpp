@@ -865,7 +865,15 @@ void SpaInterface::updateMeasures() {
     #pragma endregion
 
     // There is no RG register in V2 firmware
-    if (RG < 0) return;
+    if (RG < 0) {
+        // Enable all pumps as single speed for V2 firmware.
+        update_Pump1InstallState("1-1-01");
+        update_Pump2InstallState("1-1-01");
+        update_Pump3InstallState("0-");
+        update_Pump4InstallState("1-1-01");
+        update_Pump5InstallState("0-");
+        return;
+    }
 
     #pragma region RG
     update_Pump1InstallState(statusResponseRaw[RG + 7]);
