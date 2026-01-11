@@ -1,11 +1,5 @@
 #include "WebUI.h"
 
-WebUI::WebUI(SpaInterface *spa, Config *config, MQTTClientWrapper *mqttClient) {
-    _spa = spa;
-    _config = config;
-    _mqttClient = mqttClient;
-}
-
 const char * WebUI::getError() {
     return Update.errorString();
 }
@@ -32,11 +26,6 @@ void WebUI::begin() {
     server.on("/fota", HTTP_GET, [&](AsyncWebServerRequest *request) {
         debugD("uri: %s", request->url().c_str());
         request->send(200, "text/html", fotaPage);
-    });
-
-    server.on("/config", HTTP_GET, [&](AsyncWebServerRequest *request) {
-        debugD("uri: %s", request->url().c_str());
-        request->send(SPIFFS, "/www/config.htm");
     });
 
     server.on("/fota", HTTP_POST, [this](AsyncWebServerRequest *request) {
@@ -170,8 +159,66 @@ void WebUI::begin() {
         request->send(response);
     });
 
+    server.on("/scan", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        debugD("uri: %s", request->url().c_str());
+
+        int scanComplete = _wifiTools->scanWiFiNetworks();
+        if (scanComplete == WIFI_SCAN_RUNNING) {
+            debugD("WiFi scan already in progress");
+            request->send(202, "application/json", "{\"status\":\"scan_in_progress\"}");
+        } else if (scanComplete >= 0) {
+            String json = _wifiTools->getWiFiNetworksJSON();
+            debugD("WiFi scan completed successfully");
+            request->send(200, "application/json", json);
+        } else if (scanComplete == WIFI_SCAN_FAILED) {
+            debugD("WiFi scan failed");
+            request->send(202, "application/json", "{\"status\":\"scan_failed\"}");
+        } else {
+            debugD("WiFi scan timed out or failed");
+            request->send(500, "application/json", "{\"error\":\"scan_timeout\"}");
+        }
+    });
+
+    server.on("/connect", HTTP_POST, [this](AsyncWebServerRequest *request){
+        debugD("uri: %s", request->url().c_str());
+        String ssid, password;
+
+        if (request->hasParam("ssid", true)) {
+            ssid = request->getParam("ssid", true)->value();
+            ssid.trim(); // Remove leading/trailing whitespace
+            debugD("ssid: %s", ssid.c_str());
+        }
+        if (request->hasParam("password", true)) {
+            password = request->getParam("password", true)->value();
+            password.trim(); // Remove leading/trailing whitespace
+            debugD("password: %s", password.c_str());
+        }
+
+        if (ssid.length() == 0) {
+            debugD("SSID not provided");
+            request->send(400, "application/json", "{\"error\":\"SSID required\"}");
+            return;
+        }
+
+        if (_wifiTools->connectToWiFi(&ssid, &password)) {
+            debugD("Connected to WiFi SSID: %s", ssid.c_str());
+            request->send(200, "application/json", "{\"success\":true}");
+        } else {
+            debugD("Failed to connect to WiFi SSID: %s", ssid.c_str());
+            request->send(500, "application/json", "{\"success\":false,\"reason\":\"Connection failed\"}");
+        }
+    });
+
+
     // As a fallback we try to load from /www any requested URL
-    server.serveStatic("/", SPIFFS, "/www/");
+    // Serve root pages without caching
+    server.serveStatic("/", LittleFS, "/www/")
+        .setDefaultFile("index.htm")
+        .setCacheControl("no-cache");
+
+    // Serve assets (CSS, JS, images) with long cache lifetime
+    server.serveStatic("/assets", LittleFS, "/www/assets")
+        .setCacheControl("public, max-age=31536000");
 
     server.begin();
 
