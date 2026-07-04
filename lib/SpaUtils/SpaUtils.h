@@ -28,5 +28,6 @@ int getPumpSpeedMax(String pumpState);
 int getPumpSpeedMin(String pumpState);
 
 bool generateStatusJson(SpaInterface &si, MQTTClientWrapper &mqttClient, String &output, bool prettyJson=false);
+void espRestart();
 
 #endif // SPAUTILS_H

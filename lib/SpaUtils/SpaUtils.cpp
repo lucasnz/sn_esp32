@@ -1,4 +1,5 @@
 #include "SpaUtils.h"
+#include <esp_wifi.h>
 
 // Function to convert integer to time in HH:mm format
 String convertToTime(int data) {
@@ -237,3 +238,19 @@ bool generateStatusJson(SpaInterface &si, MQTTClientWrapper &mqttClient, String 
   return (jsonSize > 0);
 }
 
+void espRestart() {
+    debugD("Preparing safe reboot...");
+
+    // Disconnect Wi-Fi properly
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+
+    // Stop and deinit ESP Wi-Fi
+    esp_wifi_stop();
+    esp_wifi_deinit();
+
+    delay(100); // let hardware settle
+
+    // Perform restart
+    esp_restart();  // or esp_restart_noos() if esp_restart still fails
+}

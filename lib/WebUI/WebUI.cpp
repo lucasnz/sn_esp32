@@ -1,4 +1,5 @@
 #include "WebUI.h"
+#include "esp_private/system_internal.h"
 
 const char * WebUI::getError() {
     return Update.errorString();
@@ -11,6 +12,11 @@ void WebUI::begin() {
         if (_setSpaCallback != nullptr) {
             _setSpaCallback("reboot", "200");
             request->send(200, "text/html", "Called setSpaCallback for reboot...");
+            delay(200);
+            request->client()->setNoDelay(true);
+            request->client()->close();
+            // Stop AsyncWebServer
+            server.end();
         } else {
             AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Rebooting ESP...");
             response->addHeader("Connection", "close");
@@ -18,9 +24,27 @@ void WebUI::begin() {
             debugD("Rebooting...");
             delay(200);
             request->client()->setNoDelay(true);
-            request->client()->stop();
-            ESP.restart();
+            request->client()->close();
+            // Stop AsyncWebServer
+            server.end();
+            espRestart();
+            //ESP.restart();
         }
+    });
+
+    server.on("/reboot-hard", HTTP_GET, [&](AsyncWebServerRequest *request) {
+        debugD("uri: %s", request->url().c_str());
+
+        AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Rebooting ESP...");
+        response->addHeader("Connection", "close");
+        request->send(response);
+        debugD("Rebooting...");
+        delay(200);
+        request->client()->setNoDelay(true);
+        request->client()->close();
+        // Stop AsyncWebServer
+        server.end();
+        esp_restart_noos(); // Hard reboot without OS cleanup
     });
 
     server.on("/fota", HTTP_GET, [&](AsyncWebServerRequest *request) {
@@ -45,10 +69,11 @@ void WebUI::begin() {
             static int updateType = U_FLASH; // Default to firmware update
 
             if (request->hasArg("updateType")) {
-                String type = request->arg("updateType");
+                const String& type = request->arg("updateType");
                 if (type == "filesystem") {
                     updateType = U_SPIFFS;
                     debugD("Filesystem update selected.");
+                    LittleFS.end();
                 } else if (type == "application") {
                     updateType = U_FLASH;
                     debugD("Application (firmware) update selected.");

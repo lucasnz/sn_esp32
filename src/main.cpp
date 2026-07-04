@@ -604,7 +604,8 @@ void loop() {
     if (spaCallbackProperty == "reboot") {
       debugI("Rebooting ESP after %d ms", spaCallbackValue.toInt());
       delay(spaCallbackValue.toInt()); // Wait for the specified time before rebooting
-      ESP.restart();
+      //ESP.restart();
+      espRestart();
     } else {
       debugD("Setting Spa Properties...");
       setSpaCallbackReady = false;
