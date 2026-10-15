@@ -1,0 +1,74 @@
+# .github/workflows/check_platformio_dependencies.yml
+name: Check PlatformIO Dependencies
+
+on:
+  schedule:
+    # Every Monday at 06:00 UTC
+    - cron: "0 6 * * 1"
+
+  workflow_dispatch:
+
+  pull_request:
+    paths:
+      - "platformio.ini"
+      - "requirements.txt"
+      - ".github/workflows/check_platformio_dependencies.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check-dependencies:
+    name: Check dependency updates
+    runs-on: ubuntu-latest
+
+    env:
+      PYTHON_VERSION: "3.13"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - esp32dev
+          - espa-v1
+          - espa-v2
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install PlatformIO
+        run: python -m pip install -r requirements.txt
+
+      - name: Check for outdated dependencies
+        id: outdated
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          mkdir -p reports
+          report="reports/${{ matrix.platform }}.txt"
+
+          echo "Checking dependencies for ${{ matrix.platform }}"
+          echo "Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" > "$report"
+          echo "Environment: ${{ matrix.platform }}" >> "$report"
+          echo >> "$report"
+
+          pio pkg outdated -e "${{ matrix.platform }}" 2>&1 \
+            | tee -a "$report"
+
+      - name: Upload dependency report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: platformio-dependencies-${{ matrix.platform }}
+          path: reports/${{ matrix.platform }}.txt
+          if-no-files-found: warn
+          retention-days: 30
