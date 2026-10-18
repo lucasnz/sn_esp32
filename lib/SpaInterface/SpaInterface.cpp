@@ -866,7 +866,8 @@ bool SpaInterface::readStatus() {
         }
 
         statusResponseRaw[field] = registerData;
-        debugV("(%i,%s)",field,statusResponseRaw[field].c_str());
+        registerData.replace("\n", "\\n");
+        debugV("(%i,%s)", field, registerData.c_str());
 
         // if we have reached an end of line, we are at the end of the current register
         if (isEndOfLine) {
