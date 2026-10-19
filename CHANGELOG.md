@@ -1,4 +1,22 @@
 # Changelog
+## [2.0.4]
+### Features:
+- Implement spa name changes without reboot
+- Removed internet dependencies from /fota
+- Back off mqtt when trying to reconnect
+- Add redirect to /fota if file system is corrupt
+- Add 404 Not Found response for files that don't exist
+- Add sanitise button support
+- Implement LittleFS and include internet dependencies on flash memory
+- Enable gzip compression
+### Dependency updates:
+- Update PubSubClient and RemoteDebug to more modern and maintained libraries
+### Bug fixes:
+- Implement safe handling of millis()
+- Improved handling of date/time in espa.js
+- Json tidy ups in WebUI.cpp
+- Tidy up logging in SpaInterface.cpp
+
 ## [2.0.3-beta]
 - Fix build for pio 6.2.0
 - Update dependencies
