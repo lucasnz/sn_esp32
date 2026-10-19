@@ -6,7 +6,6 @@
 #include "WebRemoteDebug.h"
 #include <WiFiManager.h>
 #include <ESPmDNS.h>
-#include <SPIFFS.h>
 
 #include "MultiBlinker.h"
 
@@ -921,12 +920,6 @@ void setup() {
 
   blinker.setState(STATE_NONE); // start with all LEDs off
   blinker.start();
-
-  if (SPIFFS.begin()) {
-    debugD("Mounted SPIFFS");
-  } else {
-    debugE("Error mounting SPIFFS");
-  }
 
   debugA("Starting ESP...");
 

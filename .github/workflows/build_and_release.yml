@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [esp32dev, espa-v1, espa-v2]
+        platform: [esp32dev, espa-v1, espa-v2, espa-v2-legacy]
 
     uses: ./.github/workflows/build_firmware.yml
     with:
@@ -86,7 +86,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          for platform in esp32dev espa-v1 espa-v2; do
+          for platform in esp32dev espa-v1 espa-v2 espa-v2-legacy; do
             for suffix in factory ota; do
               file="firmware/firmware_${platform}_${suffix}.bin"
 
