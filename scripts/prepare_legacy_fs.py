@@ -3,9 +3,15 @@ Import("env")
 
 import os
 import shutil
+import stat
 
 project_dir = env.subst("$PROJECT_DIR")
 environment = env.subst("$PIOENV")
+
+def handle_remove_error(func, path, exc):
+    # Clear the read-only attribute, then retry the failed operation.
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 # Only alter the filesystem source for the legacy environment.
 if environment != "espa-v2-legacy":
@@ -22,7 +28,7 @@ else:
 
     # Rebuild the staging directory from scratch on every run.
     if os.path.exists(staging_dir):
-        shutil.rmtree(staging_dir)
+        shutil.rmtree(staging_dir, onerror=handle_remove_error)
 
     shutil.copytree(source_dir, staging_dir)
 
@@ -32,7 +38,7 @@ else:
     )
 
     if os.path.isdir(vendor_dir):
-        shutil.rmtree(vendor_dir)
+        shutil.rmtree(vendor_dir, onerror=handle_remove_error)
         print("[legacy-fs] Removed www/vendor from staged filesystem")
 
     # Point the ESP32 filesystem builder at the staged directory.
